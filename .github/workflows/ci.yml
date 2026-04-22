@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Ruff
+        run: python -m ruff check src tests
+
+      - name: Pytest
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q
+
+      - name: CLI smoke test
+        run: python -m synthonor --help
+
+  package-build-smoke:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+          python -m build
+
+      - name: Assert packaged contents
+        run: |
+          python - <<'PY'
+          import tarfile
+          import zipfile
+          from pathlib import Path
+
+          dist_dir = Path("dist")
+          wheel_path = next(dist_dir.glob("*.whl"))
+          sdist_path = next(dist_dir.glob("*.tar.gz"))
+
+          with zipfile.ZipFile(wheel_path) as wheel:
+              wheel_names = set(wheel.namelist())
+          assert "synthonor/data/synthon_space_1M.tsv" in wheel_names
+          assert not any(".synthon_fp_cache." in name for name in wheel_names)
+
+          with tarfile.open(sdist_path, "r:gz") as sdist:
+              sdist_names = set(sdist.getnames())
+          assert any(name.endswith("src/synthonor/data/synthon_space_1M.tsv") for name in sdist_names)
+          assert not any(".synthon_fp_cache." in name for name in sdist_names)
+          print("artifact contents look correct")
+          PY
+
+      - name: Wheel install smoke test
+        run: |
+          python -m venv /tmp/synthonor-wheel-smoke
+          /tmp/synthonor-wheel-smoke/bin/python -m pip install --upgrade pip
+          /tmp/synthonor-wheel-smoke/bin/python -m pip install dist/*.whl
+          /tmp/synthonor-wheel-smoke/bin/python - <<'PY'
+          from synthonor import FingerprintSpec, example_space_path, load_synthon_or_index, search_smiles
+
+          with example_space_path() as tsv_path:
+              index = load_synthon_or_index(tsv_path, fingerprint_spec=FingerprintSpec(kind="ecfp4"))
+              hits = search_smiles("CCN", index, top_n=1, preset="fast")
+              assert hits
+          print("wheel API smoke passed")
+          PY
+          /tmp/synthonor-wheel-smoke/bin/python - <<'PY'
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          from synthonor import example_space_path
+
+          with example_space_path() as tsv_path:
+              output = Path("/tmp/synthonor_hits.jsonl")
+              subprocess.run(
+                  [
+                      sys.executable,
+                      "-m",
+                      "synthonor",
+                      str(tsv_path),
+                      "--test",
+                      "--preset",
+                      "fast",
+                      "--top-n",
+                      "1",
+                      "--output",
+                      str(output),
+                  ],
+                  check=True,
+              )
+              assert output.exists()
+          print("wheel CLI smoke passed")
+          PY
+
+      - name: Sdist install smoke test
+        run: |
+          python -m venv /tmp/synthonor-sdist-smoke
+          /tmp/synthonor-sdist-smoke/bin/python -m pip install --upgrade pip
+          /tmp/synthonor-sdist-smoke/bin/python -m pip install dist/*.tar.gz
+          /tmp/synthonor-sdist-smoke/bin/python - <<'PY'
+          from synthonor import example_space_path
+
+          with example_space_path() as tsv_path:
+              assert tsv_path.exists()
+          print("sdist smoke passed")
+          PY

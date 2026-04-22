@@ -205,3 +205,25 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# synthonor project artifacts / large payloads
+/data/*
+!/data/synthon_space_1M.tsv
+/results/
+/notebooks/_generated/
+
+# Archives and local junk
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,27 @@
+{
+  "fingerprint": "ecfp4",
+  "fingerprint_spec": {
+    "connector_policy": "keep",
+    "fp_size": 2048,
+    "include_chirality": false,
+    "kind": "morgan",
+    "radius": 2,
+    "union_mode": "or",
+    "use_features": false
+  },
+  "num_bytes": 256,
+  "num_rows": 6273,
+  "paths": {
+    "bitcounts": "/home/mirekl/Synthon_RL/synthonor/src/synthonor/data/synthon_space_1M.ecfp4.synthon_fp_cache.bitcounts.u32",
+    "packed_fps": "/home/mirekl/Synthon_RL/synthonor/src/synthonor/data/synthon_space_1M.ecfp4.synthon_fp_cache.packed_fps.u8"
+  },
+  "skip_bad_rows": false,
+  "source": {
+    "content_sha256": "d234a99d2695ed5e5269fe162bba12b99be1cd9c8d5ec0c43e57fa4180aee841",
+    "mtime_ns": 1776795503880203790,
+    "name": "synthon_space_1M.tsv",
+    "path": "/home/mirekl/Synthon_RL/synthonor/src/synthonor/data/synthon_space_1M.tsv",
+    "size": 320747
+  },
+  "version": 2
+}

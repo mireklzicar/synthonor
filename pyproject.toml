@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synthonor"
+version = "0.2.0"
+description = "Minimal standalone RDKit synthon-OR search."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["cheminformatics", "rdkit", "synthon", "virtual-screening", "drug-discovery"]
+authors = [
+  {name = "Miroslav Lzicar"},
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "numpy>=1.24",
+  "rdkit",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "bump2version>=1.0",
+  "pytest>=7.0",
+  "ruff>=0.4",
+  "twine>=5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mireklzicar/synthonor"
+Documentation = "https://github.com/mireklzicar/synthonor#readme"
+Repository = "https://github.com/mireklzicar/synthonor"
+Issues = "https://github.com/mireklzicar/synthonor/issues"
+
+[project.scripts]
+synthonor = "synthonor.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"synthonor.data" = ["*.tsv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
