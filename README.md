@@ -1,13 +1,11 @@
 # synthonor
 
-Opensource synthon similarity search with a bitwise OR strategy and support of generic fingerprints.
+[![PyPI](https://img.shields.io/pypi/v/synthonor.svg)](https://pypi.org/project/synthonor/)
+[![Demo Website](https://img.shields.io/badge/demo-website-0A7B83)](https://synthonor.mireklzicar.com/)
 
-`synthonor` supports a simple workflow:
+Open source synthon similarity search with a bitwise OR strategy and support of generic fingerprints (ecfp4, rdkit, atom pair, topological torsion...)
 
-- build packed synthon fingerprints once per TSV + fingerprint setting
-- memory-map the packed cache when searching
-- reuse a valid cache automatically on later runs
-- search with `load_synthon_or_index(...)`, `search_smiles(...)`, and `search_fingerprint(...)`
+![](assets/synthonor.png)
 
 ## Install
 
@@ -68,6 +66,12 @@ query_fp = query_fingerprint_from_smiles("CCN1CCN(CC1)C(=O)c1ccccc1", index.fing
 hits = search_fingerprint(query_fp, index, min_score=0.35, preset="very_accurate")
 ```
 
+## Benchmark Snapshot
+
+In the `chembl_33_100` benchmark, `100` ChEMBL molecules were searched against `FreedomSpace_140bn_2025-07`, the top `100` assembled neighbors per query were collected, and exact Morgan `2048`-bit (`ECFP4`-style) Tanimoto similarities were recomputed on the returned products for an apples-to-apples comparison; the count-matched distribution below shows `synthonor` shifted clearly to the right of `SpaceLight` and `FTrees`, meaning it retrieves more fingerprint-similar molecules on this slice on average (mean count-matched Tanimoto `0.427` vs `0.371` for `SpaceLight` and `0.266` for `FTrees`).
+
+![](assets/chembl33_freedomspace_count_matched_hist_kde.png)
+
 ## CLI
 
 Build or validate cache only:
@@ -116,17 +120,6 @@ Config precedence:
   and a `250k` exhaustive tuple limit
 - `very_accurate`: same route coverage as `accurate`, with `256` candidates per
   slot and a `500k` exhaustive tuple limit
-
-## Fingerprints
-
-Packed on-disk synthon caches are used for bit fingerprint families:
-
-- `ecfp4`
-- `ecfp6`
-- `rdkit`
-- `patternfp`
-- `atom_pair`
-- `topological_torsion`
 
 ## Package Contents
 
