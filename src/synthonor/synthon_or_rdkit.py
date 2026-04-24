@@ -78,14 +78,14 @@ class ReactionIndex:
 @dataclass(frozen=True)
 class SearchConfig:
     reaction_cap: int | None = 8
-    candidate_bank_size: int = 192
-    exhaustive_tuple_limit: int = 250_000
+    candidate_bank_size: int = 64
+    exhaustive_tuple_limit: int = 50_000
     topk_products: int = 100
 
     @classmethod
     def preset(
         cls,
-        name: SearchPreset = "accurate",
+        name: SearchPreset = "fast",
         *,
         topk_products: int = 100,
         **overrides: object,
@@ -93,14 +93,14 @@ class SearchConfig:
         label = _normalize_search_preset_name(name)
         if label == "fast":
             base = cls(
-                reaction_cap=1,
+                reaction_cap=8,
                 candidate_bank_size=64,
                 exhaustive_tuple_limit=50_000,
                 topk_products=int(topk_products),
             )
         elif label == "accurate":
             base = cls(
-                reaction_cap=8,
+                reaction_cap=None,
                 candidate_bank_size=192,
                 exhaustive_tuple_limit=250_000,
                 topk_products=int(topk_products),
@@ -817,7 +817,7 @@ def search_fingerprint(
     top_n: int | None = None,
     min_score: float | None = None,
     max_score: float | None = None,
-    preset: SearchPreset = "accurate",
+    preset: SearchPreset = "fast",
     config: SearchConfig | None = None,
 ) -> list[ApproxHit]:
     if min_score is not None and max_score is not None and float(min_score) > float(max_score):
@@ -845,7 +845,7 @@ def search_smiles(
     top_n: int | None = None,
     min_score: float | None = None,
     max_score: float | None = None,
-    preset: SearchPreset = "accurate",
+    preset: SearchPreset = "fast",
     config: SearchConfig | None = None,
 ) -> list[ApproxHit]:
     query_fp = query_fingerprint_from_smiles(query_smiles, index.fingerprint_spec)

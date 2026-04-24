@@ -6,13 +6,8 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SYNTHONOR_ROOT = SCRIPT_DIR.parent
-REPO_ROOT = SYNTHONOR_ROOT.parent
 
-for candidate in (
-    SYNTHONOR_ROOT / "src",
-    REPO_ROOT / "synthonor_advanced" / "src",
-    REPO_ROOT / "rdkit-fp" / "src",
-):
+for candidate in (SYNTHONOR_ROOT / "src",):
     if candidate.exists():
         sys.path.insert(0, str(candidate))
 
@@ -20,9 +15,7 @@ from synthonor import FingerprintSpec  # noqa: E402
 
 
 DEFAULT_TSV_PATH = SYNTHONOR_ROOT / "src" / "synthonor" / "data" / "synthon_space_1M.tsv"
-DEFAULT_REACTIONS_PATH = (
-    REPO_ROOT / "synthongpt_beta" / "data" / "molecules" / "chemspace" / "2024-09_Freedom_reactions.txt"
-)
+DEFAULT_REACTIONS_PATH = SYNTHONOR_ROOT / "src" / "synthonor" / "data" / "synthon_space_1M.reactions.tsv"
 DEFAULT_CACHE_OUTPUT_DIR = SYNTHONOR_ROOT / "results" / "bundled_1M_fingerprint_caches"
 DEFAULT_BENCHMARK_OUTPUT_DIR = SYNTHONOR_ROOT / "results" / "full_product_retrieval_fingerprint_kinds"
 

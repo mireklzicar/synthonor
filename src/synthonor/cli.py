@@ -86,7 +86,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--preset",
-        default="accurate",
+        default="fast",
         choices=["fast", "accurate", "very_accurate"],
         help="Search preset controlling reaction routing and tuple limits.",
     )

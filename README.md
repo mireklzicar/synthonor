@@ -1,6 +1,6 @@
 # synthonor
 
-Minimal standalone RDKit synthon-OR search with a packed on-disk synthon fingerprint index.
+Opensource synthon similarity search with a bitwise OR strategy and support of generic fingerprints.
 
 `synthonor` supports a simple workflow:
 
@@ -20,41 +20,44 @@ pip install synthonor
 SynthonOR expects a tab-separated table with these concepts:
 
 ```text
-smiles\tsynthon_id\tposition\treaction_id
-NC(=O)[C@@H]1CCCN1[U]\t100000003125\t1\t11a
-C[C@@H](O)[C@H](N[U])C(N)=O\t100000003557\t1\t11a
-CCCN([U])C(C)C(=O)Nc1ccccc1C\t100000003669\t1\t11a
-O=C1CN([U])[C@@H](c2ccccc2)CO1\t100000005368\t1\t11a
+smiles  synthon_id  position  reaction_id
+NC(=O)[C@@H]1CCCN1[U] 100000003125 1  11a
+C[C@@H](O)[C@H](N[U])C(N)=O 100000003557 1  11a
+CCCN([U])C(C)C(=O)Nc1ccccc1C  100000003669  1 11a
+O=C1CN([U])[C@@H](c2ccccc2)CO1  100000005368  1 11a
 ```
 
-The package ships with a small bundled example TSV (`synthon_space_1M.tsv`) as package data.
+The package ships with a bundled example synthon slice (`synthon_space_1M.tsv`).
+The repo also includes the matching reaction schema table used by the exact
+benchmark script.
 
 ## Quick Start (Python)
 
 ```python
 from synthonor import (
-    FingerprintSpec,
     build_synthon_fingerprint_cache,
     example_space_path,
     load_synthon_or_index,
     search_smiles,
 )
 
-with example_space_path() as data_path:
-    spec = FingerprintSpec(kind="ecfp4")
-    cache_info = build_synthon_fingerprint_cache(data_path, fingerprint_spec=spec)
-    index = load_synthon_or_index(data_path, fingerprint_spec=spec)
+data_path = example_space_path()
+cache_info = build_synthon_fingerprint_cache(data_path)
+index = load_synthon_or_index(data_path)
 
-    hits = search_smiles(
-        "CCOc1ccc(NC(=O)N2CCN(CC2)C)cc1",
-        index,
-        top_n=25,
-        preset="accurate",
-    )
+hits = search_smiles(
+    "CCOc1ccc(NC(=O)N2CCN(CC2)C)cc1",
+    index,
+    top_n=25,
+)
 
 print(cache_info.cache_prefix)
 print(hits[0].reaction_id, hits[0].synthon_ids, round(hits[0].approx_score, 3))
 ```
+
+`example_space_path()` returns a normal writable local path to the bundled
+example TSV, so the first cache build can live right next to it. The default
+fingerprint is `ecfp4`.
 
 Fingerprint-based search:
 
@@ -80,7 +83,6 @@ Run search:
 ```bash
 synthonor path/to/syntons.tsv \
   --query "CCOc1ccc(NC(=O)N2CCN(CC2)C)cc1" \
-  --preset accurate \
   --top-n 25 \
   --output synthonor_hits.jsonl
 ```
@@ -108,9 +110,12 @@ Config precedence:
 
 ## Search Presets
 
-- `fast`: one reaction route, small candidate bank
-- `accurate`: default setting
-- `very_accurate`: searches all prescreened reactions
+- `fast`: default setting; up to `8` reaction routes, `64` candidates per slot,
+  `50k` exhaustive tuple limit
+- `accurate`: searches all prescreened reactions with `192` candidates per slot
+  and a `250k` exhaustive tuple limit
+- `very_accurate`: same route coverage as `accurate`, with `256` candidates per
+  slot and a `500k` exhaustive tuple limit
 
 ## Fingerprints
 
@@ -128,7 +133,8 @@ Packed on-disk synthon caches are used for bit fingerprint families:
 After `pip install synthonor`, installed artifacts include:
 
 - Python package code under `synthonor`
-- bundled example TSV exposed via `synthonor.example_space_path()`
+- bundled example TSV exposed via `synthonor.example_space_path()`, which materializes a writable local copy
+- bundled benchmark reaction schema table under `synthonor.data`
 
 Repo-only artifacts that are not installed by default:
 
@@ -136,17 +142,25 @@ Repo-only artifacts that are not installed by default:
 - notebooks in `notebooks/`
 - local test/result outputs
 
-## Tiny Benchmark (Bundled Example)
+## Benchmark Snapshot
 
-Measured on 2026-04-21 (Python 3.11, default `accurate` preset, query top-25) using the bundled example space (`6273` synthons, `42` reactions):
+Headline results below come from the exact full-product benchmark on the
+bundled `synthon_space_1M.tsv` slice (`6273` synthons, `42` reactions), using
+the matching bundled reaction schema table and `10` deterministic queries.
 
-| Step | Time |
-| --- | --- |
-| first `load_synthon_or_index(...)` (cache build + mmap) | 0.57 s |
-| repeated `load_synthon_or_index(...)` (cache reuse) | 0.02 s |
-| `search_smiles(..., top_n=25, preset="accurate")` | 5.34 s |
+| fingerprint | fast overlap | fast wall time / query (s) | accurate overlap | accurate wall time / query (s) |
+| --- | ---: | ---: | ---: | ---: |
+| `ecfp4` | `56.2` | `0.963` | `63.9` | `7.337` |
+| `ecfp6` | `49.7` | `0.925` | `56.6` | `7.376` |
+| `topological_torsion` | `30.2` | `0.874` | `33.4` | `7.455` |
+| `rdkit` | `20.9` | `1.110` | `25.4` | `7.520` |
+| `atom_pair` | `9.8` | `1.202` | `13.8` | `7.572` |
+| `patternfp` | `2.2` | `1.215` | `2.2` | `7.509` |
 
-Treat these as reference-scale numbers for this bundled dataset.
+- `fast` is now the default because it captures most of the retrieval quality
+  at roughly `1 s/query` on this bundled example.
+- `accurate` improves overlap further, but costs about `7.3-7.6 s/query`.
+- `ecfp4` remains the strongest overall default fingerprint on this benchmark.
 
 ## Reproducible Scripts
 
@@ -154,18 +168,17 @@ From the repo root you can materialize the bundled synthon caches for every
 bit-fingerprint family:
 
 ```bash
-python synthonor/scripts/build_example_fingerprint_caches.py
+python scripts/build_example_fingerprint_caches.py
 ```
 
-And you can run a small exact full-product retrieval benchmark on the bundled
-1M synthon slice, using the matching Freedom reaction table that already lives
-in this repo:
+And you can run the exact full-product retrieval benchmark on the bundled
+`synthon_space_1M` slice without relying on sibling repos:
 
 ```bash
-python synthonor/scripts/run_exact_full_product_retrieval.py
+python scripts/run_exact_full_product_retrieval.py
 ```
 
-Outputs land under `synthonor/results/` by default.
+Outputs land under `results/` by default.
 
 ## Layout
 

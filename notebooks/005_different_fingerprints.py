@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 import csv
-import shutil
 from pathlib import Path
 from pprint import pprint
 
@@ -97,19 +96,7 @@ def write_reaction_subset(source_path: Path, target_path: Path, *, reaction_limi
     print("Subset rows:", len(selected_rows))
     return target_path
 
-
-def resolve_example_space_path() -> Path:
-    generated_dir = ROOT / "notebooks" / "_generated"
-    generated_dir.mkdir(parents=True, exist_ok=True)
-    local_copy = generated_dir / "bundled_synthon_space_1M.tsv"
-    if local_copy.exists():
-        return local_copy
-    with example_space_path() as bundled_path:
-        shutil.copyfile(bundled_path, local_copy)
-    return local_copy
-
-
-FULL_DATA_PATH = resolve_example_space_path()
+FULL_DATA_PATH = example_space_path()
 GENERATED_DIR = ROOT / "notebooks" / "_generated"
 COMPARE_DATA_PATH = write_reaction_subset(
     FULL_DATA_PATH,

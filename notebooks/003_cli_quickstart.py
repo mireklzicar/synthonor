@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -19,16 +18,7 @@ GENERATED_DIR = ROOT / "notebooks" / "_generated"
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def resolve_example_space_path() -> Path:
-    local_copy = GENERATED_DIR / "bundled_synthon_space_1M.tsv"
-    if local_copy.exists():
-        return local_copy
-    with example_space_path() as bundled_path:
-        shutil.copyfile(bundled_path, local_copy)
-    return local_copy
-
-
-DATA_PATH = resolve_example_space_path()
+DATA_PATH = example_space_path()
 OUTPUT_PATH = GENERATED_DIR / "cli_quickstart_hits.jsonl"
 
 # %% [markdown]

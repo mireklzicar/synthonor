@@ -27,7 +27,6 @@ from _common import (
 )
 from synthonor import FingerprintSpec, SearchConfig, load_synthon_or_index, search_smiles
 from synthonor.fingerprints import fingerprint_mol, fingerprint_smiles, tanimoto_similarity
-from synthonor_advanced.reactions import ReactionSchema, load_reaction_schemas
 
 
 @dataclass(frozen=True)
@@ -47,6 +46,27 @@ class QueryCase:
     query_smiles: str
     exact_fp: object
     truth_top100_smiles: frozenset[str]
+
+
+@dataclass(frozen=True)
+class ReactionSchema:
+    reaction_id: str
+    arity: int
+    reaction_smarts: str
+
+
+def load_reaction_schemas(path: str | Path) -> dict[str, ReactionSchema]:
+    schemas: dict[str, ReactionSchema] = {}
+    with Path(path).open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        for row in reader:
+            reaction_id = str(row["reaction_id"]).strip()
+            schemas[reaction_id] = ReactionSchema(
+                reaction_id=reaction_id,
+                arity=int(row["components"]),
+                reaction_smarts=str(row["Reaction"]).strip(),
+            )
+    return schemas
 
 
 @lru_cache(maxsize=512)
@@ -106,10 +126,15 @@ def _assemble_product_from_reaction(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Benchmark SynthonOR fingerprint families against exact full-product retrieval on the bundled 1M synthon slice."
+        description="Benchmark SynthonOR fingerprint families against exact full-product retrieval on the bundled synthon_space_1M slice."
     )
     parser.add_argument("--tsv-space", type=Path, default=DEFAULT_TSV_PATH, help="Bundled synthon TSV path.")
-    parser.add_argument("--reactions", type=Path, default=DEFAULT_REACTIONS_PATH, help="Reaction schema table that matches the bundled TSV.")
+    parser.add_argument(
+        "--reactions",
+        type=Path,
+        default=DEFAULT_REACTIONS_PATH,
+        help="Reaction schema table that matches the bundled TSV.",
+    )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_BENCHMARK_OUTPUT_DIR, help="Benchmark output directory.")
     parser.add_argument("--query-count", type=int, default=42, help="Number of deterministic query products to benchmark.")
     parser.add_argument("--seed", type=int, default=0, help="Deterministic seed used for per-reaction query sampling.")
@@ -119,13 +144,25 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Optional fingerprint labels to benchmark. Defaults to the cacheable bit fingerprints used by the cache-build script.",
     )
-    parser.add_argument("--reaction-cap", type=int, default=8, help="SearchConfig.reaction_cap.")
-    parser.add_argument("--candidate-bank-size", type=int, default=192, help="SearchConfig.candidate_bank_size.")
-    parser.add_argument("--exhaustive-tuple-limit", type=int, default=250_000, help="SearchConfig.exhaustive_tuple_limit.")
+    parser.add_argument(
+        "--reaction-cap",
+        type=str,
+        default="8",
+        help="SearchConfig.reaction_cap. Use an integer or 'none' to search all prescreened reactions.",
+    )
+    parser.add_argument("--candidate-bank-size", type=int, default=64, help="SearchConfig.candidate_bank_size.")
+    parser.add_argument("--exhaustive-tuple-limit", type=int, default=50_000, help="SearchConfig.exhaustive_tuple_limit.")
     parser.add_argument("--topk-products", type=int, default=100, help="SearchConfig.topk_products.")
     parser.add_argument("--cache-chunk-size", type=int, default=25_000, help="Rows per fingerprint cache chunk for bit fingerprints.")
     parser.add_argument("--cache-n-jobs", type=int, default=1, help="rdfp worker count for bit fingerprint caches.")
     return parser.parse_args()
+
+
+def _parse_reaction_cap(value: object) -> int | None:
+    text = str(value).strip().lower()
+    if text in {"none", "all", "null"}:
+        return None
+    return int(text)
 
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
@@ -461,7 +498,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
     approx_retrieval_rows: list[dict[str, object]] = []
     method_summaries: list[dict[str, object]] = []
     active_config = SearchConfig(
-        reaction_cap=int(args.reaction_cap),
+        reaction_cap=_parse_reaction_cap(args.reaction_cap),
         candidate_bank_size=int(args.candidate_bank_size),
         exhaustive_tuple_limit=int(args.exhaustive_tuple_limit),
         topk_products=int(args.topk_products),

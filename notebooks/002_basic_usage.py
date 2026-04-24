@@ -15,7 +15,6 @@
 # %%
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from pprint import pprint
 
@@ -69,19 +68,7 @@ def show_molecules(smiles_list: list[str], legends: list[str], *, mols_per_row: 
     display(image)
     return image
 
-
-def resolve_example_space_path() -> Path:
-    generated_dir = ROOT / "notebooks" / "_generated"
-    generated_dir.mkdir(parents=True, exist_ok=True)
-    local_copy = generated_dir / "bundled_synthon_space_1M.tsv"
-    if local_copy.exists():
-        return local_copy
-    with example_space_path() as bundled_path:
-        shutil.copyfile(bundled_path, local_copy)
-    return local_copy
-
-
-DATA_PATH = resolve_example_space_path()
+DATA_PATH = example_space_path()
 fingerprint_spec = FingerprintSpec(kind="ecfp4").normalized()
 PRESET = "accurate"
 
