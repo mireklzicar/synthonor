@@ -3,11 +3,18 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import importlib.metadata as package_metadata
 import json
+import os
+import platform
 import random
 import statistics
+import subprocess
+import sys
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from functools import lru_cache
 from itertools import product
 from pathlib import Path
@@ -24,6 +31,7 @@ from _common import (
     DEFAULT_REACTIONS_PATH,
     DEFAULT_TSV_PATH,
     EXACT_FINGERPRINT_SPEC,
+    SYNTHONOR_ROOT,
 )
 from synthonor import FingerprintSpec, SearchConfig, load_synthon_or_index, search_smiles
 from synthonor.fingerprints import fingerprint_mol, fingerprint_smiles, tanimoto_similarity
@@ -439,6 +447,167 @@ def _write_csv(path: Path, rows: Sequence[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
+def _write_jsonl(path: Path, rows: Iterable[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, sort_keys=True))
+            handle.write("\n")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_record(path: Path) -> dict[str, object]:
+    resolved = path.resolve()
+    return {
+        "path": str(resolved),
+        "bytes": int(resolved.stat().st_size),
+        "sha256": _sha256(resolved),
+    }
+
+
+def _git_info(path: Path) -> dict[str, object]:
+    def run_git(*args: str) -> str | None:
+        try:
+            result = subprocess.run(
+                ("git", "-C", str(path), *args),
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return None
+        return result.stdout.strip()
+
+    commit = run_git("rev-parse", "HEAD")
+    if commit is None:
+        return {"path": str(path.resolve()), "available": False}
+    status = run_git("status", "--short") or ""
+    return {
+        "path": str(path.resolve()),
+        "available": True,
+        "branch": run_git("rev-parse", "--abbrev-ref", "HEAD"),
+        "commit": commit,
+        "dirty": bool(status),
+        "status_short": status.splitlines(),
+    }
+
+
+def _package_versions() -> dict[str, str | None]:
+    versions: dict[str, str | None] = {}
+    for name in ("numpy", "rdkit", "rdfp", "synthonor"):
+        try:
+            versions[name] = package_metadata.version(name)
+        except package_metadata.PackageNotFoundError:
+            versions[name] = None
+    return versions
+
+
+def _flatten_query_summaries(method_summaries: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for method in method_summaries:
+        search_config = method.get("search_config")
+        config_items = search_config.items() if isinstance(search_config, dict) else ()
+        for query in method.get("queries", []):
+            if not isinstance(query, dict):
+                continue
+            row = {
+                "method": method.get("method"),
+                "fingerprint": method.get("fingerprint"),
+                "uses_packed_cache": method.get("uses_packed_cache"),
+            }
+            row.update({f"search_{key}": value for key, value in config_items})
+            row.update(query)
+            rows.append(row)
+    return rows
+
+
+def _aggregate_summaries(method_summaries: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for method in method_summaries:
+        row: dict[str, object] = {}
+        for key, value in method.items():
+            if key in {"queries", "tuning"}:
+                continue
+            if key == "search_config" and isinstance(value, dict):
+                row.update({f"search_{config_key}": config_value for config_key, config_value in value.items()})
+            elif not isinstance(value, (list, dict)):
+                row[key] = value
+        rows.append(row)
+    return rows
+
+
+def _raw_per_query_records(method_summaries: Sequence[dict[str, object]]) -> Iterable[dict[str, object]]:
+    for method in method_summaries:
+        for query in method.get("queries", []):
+            if not isinstance(query, dict):
+                continue
+            yield {
+                "method": method.get("method"),
+                "fingerprint": method.get("fingerprint"),
+                "uses_packed_cache": method.get("uses_packed_cache"),
+                "search_config": method.get("search_config"),
+                "query": query,
+            }
+
+
+def _write_run_metadata(
+    *,
+    args: argparse.Namespace,
+    summary: dict[str, object],
+    output_paths: Sequence[Path],
+) -> None:
+    input_paths = [Path(args.tsv_space), Path(args.reactions)]
+    exact_library = summary.get("exact_library", {})
+    library_paths = [
+        Path(args.output_dir) / "exact_library" / "exact_product_library_summary.json",
+        Path(args.output_dir) / "exact_library" / "exact_product_smiles.csv",
+        Path(args.output_dir) / "exact_library" / "exact_product_fingerprints.u8",
+        Path(args.output_dir) / "exact_library" / "exact_product_bitcounts.u32",
+    ]
+    metadata = {
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "command": {
+            "argv": sys.argv,
+            "output_dir": str(Path(args.output_dir).resolve()),
+            "query_count": int(args.query_count),
+            "seed": int(args.seed),
+            "fingerprints": args.fingerprints,
+            "reaction_cap": args.reaction_cap,
+            "candidate_bank_size": int(args.candidate_bank_size),
+            "exhaustive_tuple_limit": int(args.exhaustive_tuple_limit),
+            "topk_products": int(args.topk_products),
+            "cache_chunk_size": int(args.cache_chunk_size),
+            "cache_n_jobs": int(args.cache_n_jobs),
+        },
+        "python": {
+            "version": platform.python_version(),
+            "executable": sys.executable,
+        },
+        "packages": _package_versions(),
+        "hardware": {
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "cpu_count": os.cpu_count(),
+        },
+        "git": _git_info(SYNTHONOR_ROOT),
+        "inputs": [_file_record(path) for path in input_paths if path.exists()],
+        "exact_library": exact_library,
+        "exact_library_files": [_file_record(path) for path in library_paths if path.exists()],
+        "outputs": [_file_record(path) for path in output_paths if path.exists()],
+    }
+    metadata_path = Path(args.output_dir) / "metadata.json"
+    metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True), encoding="utf-8")
+
+
 def _selected_specs(labels: Sequence[str] | None) -> list[FingerprintSpec]:
     spec_by_label = {spec.normalized().label: spec for spec in ALL_FINGERPRINT_SPECS}
     if not labels:
@@ -584,6 +753,12 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
                 "method": "synthonor",
                 "fingerprint": active_spec.label,
                 "uses_packed_cache": bool(index.uses_packed_fingerprints),
+                "search_config": {
+                    "reaction_cap": active_config.reaction_cap,
+                    "candidate_bank_size": int(active_config.candidate_bank_size),
+                    "exhaustive_tuple_limit": int(active_config.exhaustive_tuple_limit),
+                    "topk_products": int(active_config.topk_products),
+                },
                 "queries": query_metrics,
                 "mean_wall_time_sec": float(statistics.mean(wall_times)) if wall_times else 0.0,
                 "median_wall_time_sec": float(statistics.median(wall_times)) if wall_times else 0.0,
@@ -639,9 +814,31 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
         "methods": method_summaries,
     }
 
-    _write_csv(output_dir / "exact_ground_truth_top100.csv", truth_rows)
-    _write_csv(output_dir / "approx_retrievals.csv", approx_retrieval_rows)
-    (output_dir / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    exact_ground_truth_path = output_dir / "exact_ground_truth_top100.csv"
+    approx_retrievals_path = output_dir / "approx_retrievals.csv"
+    per_query_summary_path = output_dir / "per_query_summary.csv"
+    aggregate_summary_path = output_dir / "aggregate_summary.csv"
+    raw_per_query_path = output_dir / "raw_per_query.jsonl"
+    summary_path = output_dir / "summary.json"
+
+    _write_csv(exact_ground_truth_path, truth_rows)
+    _write_csv(approx_retrievals_path, approx_retrieval_rows)
+    _write_csv(per_query_summary_path, _flatten_query_summaries(method_summaries))
+    _write_csv(aggregate_summary_path, _aggregate_summaries(method_summaries))
+    _write_jsonl(raw_per_query_path, _raw_per_query_records(method_summaries))
+    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+    _write_run_metadata(
+        args=args,
+        summary=summary,
+        output_paths=[
+            exact_ground_truth_path,
+            approx_retrievals_path,
+            per_query_summary_path,
+            aggregate_summary_path,
+            raw_per_query_path,
+            summary_path,
+        ],
+    )
     return summary
 
 
