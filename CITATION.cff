@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "SynthonOR: minimal standalone RDKit synthon-OR similarity search"
+abstract: >-
+  SynthonOR is an open-source synthon similarity search using a bitwise-OR
+  strategy with support for generic RDKit fingerprints (ECFP4, RDKit, atom pair,
+  topological torsion, and more), reusable on-disk caches, and reaction-grounded
+  retrieval over very large synthon combinatorial spaces.
+type: software
+authors:
+  - given-names: Miroslav
+    family-names: Lzicar
+    email: miroslav.lzicar@deepmedchem.com
+    affiliation: Deep MedChem
+version: 0.2.0
+date-released: "2026-06-27"
+license: MIT
+repository-code: "https://github.com/mireklzicar/synthonor"
+url: "https://synthonor.mireklzicar.com/"
+keywords:
+  - cheminformatics
+  - rdkit
+  - synthon
+  - virtual-screening
+  - drug-discovery
