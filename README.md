@@ -183,3 +183,44 @@ Outputs land under `results/` by default.
 - `notebooks/003_cli_quickstart.py`: command-line quickstart
 - `notebooks/004_adding_databases.py`: preparing custom TSV databases
 - `notebooks/005_different_fingerprints.py`: comparing bit fingerprint families
+
+## Local private-core integration (unpublished)
+
+This local branch adds `ProductSearchEngine` for assembled-product retrieval.
+It calls the private shared `dmc-synthon-core` identity implementation; the
+inverse algorithm is not copied into this repository. This integration is
+pending review and must not be pushed or published yet.
+
+Use Python 3.11 or 3.12 and install the authorized private core checkout at
+commit `793cb1bfb0984ab757a1defa4dae750c819429bd` (version 0.4.3), alongside
+this local SynthonOR checkout. Ordinary SynthonOR imports and approximate
+search do not require the private core. The product engine raises an explicit
+installation error if it is unavailable.
+
+```python
+from synthonor import ProductSearchEngine
+
+# index is a loaded SynthonORIndex. Implement this callback with the space's
+# actual forward assembler; rows are original index row IDs in slot order.
+# Return product SMILES, or None when the tuple cannot assemble.
+engine = ProductSearchEngine(index, assemble, cache_dir="./identity-cache")
+products = engine.search(query_smiles, top_n=100)
+for product in products:
+    print(product.smiles, product.score, product.hit.synthon_ids)
+```
+
+Construct the engine once per space and reuse it. For template-based spaces,
+pass `reference_reactions={route_id: forward_rdkit_reaction, ...}` using the
+actual forward templates. Identity proposals are accepted only after forward
+assembly reproduces the exact canonical isomeric query. A verified proposal
+replaces one candidate within `top_n`; the candidate pool is not enlarged.
+Products are deduplicated and sorted by full-product fingerprint similarity,
+with exact isomeric identity first on ties. Score bounds apply to full-product
+scores. `product.hit.approx_score` remains the actual synthon-union score;
+`product.hit.rank` is proposal metadata, not the final product-list position.
+
+Identity search uses bounded work and falls back to ordinary candidate search
+when it finds no verified identity; a miss does not prove absence. The existing
+`search_smiles`, fingerprint-only API, and CLI retain their approximate search
+contract. Product retrieval needs the assembler callback and therefore uses
+this explicit API. No public package release is part of this local integration.

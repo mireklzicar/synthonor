@@ -2,6 +2,7 @@ __version__ = "0.2.0"
 
 from synthonor.fingerprints import FingerprintSpec
 from synthonor.resources import example_space_path
+from synthonor.product_search import ProductHit, ProductSearchEngine
 from synthonor.synthon_or_rdkit import (
     ApproxHit,
     FingerprintCacheInfo,
@@ -19,6 +20,8 @@ from synthonor.synthon_or_rdkit import (
 
 __all__ = [
     "ApproxHit",
+    "ProductHit",
+    "ProductSearchEngine",
     "FingerprintSpec",
     "FingerprintCacheInfo",
     "SearchConfig",
