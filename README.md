@@ -192,7 +192,7 @@ inverse algorithm is not copied into this repository. This integration is
 pending review and must not be pushed or published yet.
 
 Use Python 3.11 or 3.12 and install the authorized private core checkout at
-commit `802cd911fb9c81d2fa1cb3e61f6cd14fc8a3b68a` (version 0.4.5), alongside
+commit `c5d40bacc45fb41b7c18a2c523999cf22dba9805` (version 0.4.6), alongside
 this local SynthonOR checkout. Ordinary SynthonOR imports and approximate
 search do not require the private core. The product engine raises an explicit
 installation error if it is unavailable.
