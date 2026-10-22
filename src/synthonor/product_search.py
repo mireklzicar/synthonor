@@ -39,7 +39,7 @@ class ProductSearchEngine:
                 raise
             raise ImportError(
                 "ProductSearchEngine requires the private dmc-synthon-core "
-                "integration (0.4.3; Python 3.11 or 3.12). Install it from "
+                "integration (validated with 0.4.6; Python 3.11 or 3.12). Install it from "
                 "your authorized private checkout."
             ) from exc
 

@@ -184,16 +184,16 @@ Outputs land under `results/` by default.
 - `notebooks/004_adding_databases.py`: preparing custom TSV databases
 - `notebooks/005_different_fingerprints.py`: comparing bit fingerprint families
 
-## Local private-core integration (unpublished)
+## Exact-match integration (review branch)
 
-This local branch adds `ProductSearchEngine` for assembled-product retrieval.
+The `exact-match-fix` branch adds `ProductSearchEngine` for assembled-product retrieval.
 It calls the private shared `dmc-synthon-core` identity implementation; the
 inverse algorithm is not copied into this repository. This integration is
-pending review and must not be pushed or published yet.
+available for review on the dedicated branch before merging or releasing.
 
 Use Python 3.11 or 3.12 and install the authorized private core checkout at
 commit `c5d40bacc45fb41b7c18a2c523999cf22dba9805` (version 0.4.6), alongside
-this local SynthonOR checkout. Ordinary SynthonOR imports and approximate
+this SynthonOR branch checkout. Ordinary SynthonOR imports and approximate
 search do not require the private core. The product engine raises an explicit
 installation error if it is unavailable.
 
@@ -223,4 +223,4 @@ Identity search uses bounded work and falls back to ordinary candidate search
 when it finds no verified identity; a miss does not prove absence. The existing
 `search_smiles`, fingerprint-only API, and CLI retain their approximate search
 contract. Product retrieval needs the assembler callback and therefore uses
-this explicit API. No public package release is part of this local integration.
+this explicit API. No package release is part of this review branch.
