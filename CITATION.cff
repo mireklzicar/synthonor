@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using this metadata."
+type: software
+title: synthonor
+authors:
+  - family-names: "Lžičař"
+    given-names: "Miroslav"
+repository-code: "https://github.com/mireklzicar/synthonor"
+url: "https://synthonor.deepmedchem.com/"
+license: MIT
