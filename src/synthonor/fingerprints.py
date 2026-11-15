@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from typing import Literal, Sequence
+from typing import Literal
 
 from rdkit import Chem, DataStructs, RDLogger
 from rdkit.Chem import rdFingerprintGenerator, rdMolDescriptors
-
 
 CONNECTOR_ATOMIC_NUMS = (92, 93)
 
@@ -34,7 +34,7 @@ class FingerprintSpec:
     union_mode: UnionMode = "or"
     connector_policy: ConnectorPolicy = "keep"
 
-    def normalized(self) -> "FingerprintSpec":
+    def normalized(self) -> FingerprintSpec:
         kind = str(self.kind).strip().lower()
         if str(self.connector_policy).strip().lower() != "keep":
             raise ValueError("synthonor only supports connector_policy='keep'")

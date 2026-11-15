@@ -4,12 +4,14 @@ import csv
 import gc
 import hashlib
 import json
+import logging
 import math
 import os
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, replace
 from itertools import product
 from pathlib import Path
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 from rdfp import smiles_to_fps
@@ -25,10 +27,10 @@ from synthonor.fingerprints import (
     union_fingerprints,
 )
 
-
 SearchPreset = Literal["fast", "accurate", "very_accurate"]
+_LOGGER = logging.getLogger(__name__)
 _CACHE_VERSION = 2
-_POPCOUNT_LUT = np.asarray([bin(value).count("1") for value in range(256)], dtype=np.uint8)
+_POPCOUNT_LUT = np.asarray([value.bit_count() for value in range(256)], dtype=np.uint8)
 
 
 @dataclass(frozen=True)
@@ -64,7 +66,7 @@ class SlotIndex:
     def size(self) -> int:
         return len(self.records)
 
-    def take(self, n: int) -> "SlotIndex":
+    def take(self, n: int) -> SlotIndex:
         limit = max(0, min(int(n), self.size))
         return SlotIndex(slot=self.slot, records=self.records[:limit])
 
@@ -89,7 +91,7 @@ class SearchConfig:
         *,
         topk_products: int = 100,
         **overrides: object,
-    ) -> "SearchConfig":
+    ) -> SearchConfig:
         label = _normalize_search_preset_name(name)
         if label == "fast":
             base = cls(
@@ -603,6 +605,7 @@ def load_synthon_or_index(
                 try:
                     fingerprint_smiles(smiles, spec)
                 except Exception:
+                    _LOGGER.debug("Skipping row %s after fingerprint validation failed", row_number, exc_info=True)
                     continue
             record = SynthonRecord(
                 row_index=kept,
@@ -707,13 +710,13 @@ def _pool_product_size(slots: Sequence[SlotIndex]) -> int:
 
 def _trim_slots_to_exhaustive_limit(slots: tuple[SlotIndex, ...], limit: int) -> tuple[SlotIndex, ...]:
     if not slots:
-        return tuple()
+        return ()
     active_limit = max(1, int(limit))
     if _pool_product_size(slots) <= active_limit:
         return slots
 
     arity = len(slots)
-    base_cap = max(1, int(math.floor(active_limit ** (1.0 / max(arity, 1)))))
+    base_cap = max(1, math.floor(active_limit ** (1.0 / max(arity, 1))))
     sizes = [max(1, min(slot.size, base_cap)) for slot in slots]
     while math.prod(sizes) > active_limit:
         largest = max(range(len(sizes)), key=lambda idx: sizes[idx])
