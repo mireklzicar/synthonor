@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 
@@ -29,14 +30,12 @@ def _write(path: Path, text: str) -> Path:
 def test_search_smoke_and_self_recovery(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "C[U]\ta1\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-                "N[U]\ta2\t1\tr1",
-                "O[U]\tb2\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'C[U]\ta1\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1\n'
+            'N[U]\ta2\t1\tr1\n'
+            'O[U]\tb2\t2\tr1'
         )
         + "\n",
     )
@@ -58,14 +57,12 @@ def test_search_smoke_and_self_recovery(tmp_path: Path) -> None:
 def test_search_presets_and_thresholds(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "C[U]\ta1\t1\tr1",
-                "N[U]\ta2\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-                "C=C[U]\tb2\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'C[U]\ta1\t1\tr1\n'
+            'N[U]\ta2\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1\n'
+            'C=C[U]\tb2\t2\tr1'
         )
         + "\n",
     )
@@ -96,14 +93,12 @@ def test_search_presets_and_thresholds(tmp_path: Path) -> None:
 def test_bit_fingerprint_cache_is_built_and_reused(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "C[U]\ta1\t1\tr1",
-                "N[U]\ta2\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-                "O[U]\tb2\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'C[U]\ta1\t1\tr1\n'
+            'N[U]\ta2\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1\n'
+            'O[U]\tb2\t2\tr1'
         )
         + "\n",
     )
@@ -131,14 +126,12 @@ def test_bit_fingerprint_cache_is_built_and_reused(tmp_path: Path) -> None:
 def test_search_fingerprint_mode(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "c1ccccc1[U]\ta1\t1\tr1",
-                "N[U]\ta2\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-                "O[U]\tb2\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'c1ccccc1[U]\ta1\t1\tr1\n'
+            'N[U]\ta2\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1\n'
+            'O[U]\tb2\t2\tr1'
         )
         + "\n",
     )
@@ -153,12 +146,10 @@ def test_search_fingerprint_mode(tmp_path: Path) -> None:
 def test_cache_invalidation_tracks_mtime_and_hash(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "C[U]\ta1\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'C[U]\ta1\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1'
         )
         + "\n",
     )
@@ -169,12 +160,10 @@ def test_cache_invalidation_tracks_mtime_and_hash(tmp_path: Path) -> None:
     time.sleep(0.01)
     _write(
         syntons,
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "N[U]\ta1\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'N[U]\ta1\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1'
         )
         + "\n",
     )
@@ -210,12 +199,10 @@ def test_cli_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
 def test_cli_requires_explicit_query_or_test(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "C[U]\ta1\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'C[U]\ta1\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1'
         )
         + "\n",
     )
@@ -231,14 +218,12 @@ def test_cli_requires_explicit_query_or_test(tmp_path: Path) -> None:
 def test_cli_test_mode_smoke(tmp_path: Path) -> None:
     syntons = _write(
         tmp_path / "syntons.txt",
-        "\n".join(
-            [
-                "SMILES\tsynton_id\tsynton#\treaction_id",
-                "C[U]\ta1\t1\tr1",
-                "N[U]\ta2\t1\tr1",
-                "CC[U]\tb1\t2\tr1",
-                "O[U]\tb2\t2\tr1",
-            ]
+        (
+            'SMILES\tsynton_id\tsynton#\treaction_id\n'
+            'C[U]\ta1\t1\tr1\n'
+            'N[U]\ta2\t1\tr1\n'
+            'CC[U]\tb1\t2\tr1\n'
+            'O[U]\tb2\t2\tr1'
         )
         + "\n",
     )
@@ -247,3 +232,32 @@ def test_cli_test_mode_smoke(tmp_path: Path) -> None:
     assert int(code) == 0
     lines = output.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 1
+
+
+def test_skip_bad_rows_keeps_cache_alignment_and_logs_failure(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    syntons = _write(
+        tmp_path / "syntons.tsv",
+        "SMILES\tsynton_id\tsynton#\treaction_id\n"
+        "C[U]\ta1\t1\tr1\n"
+        "invalid-smiles\tbad\t1\tr1\n"
+        "CC[U]\tb1\t2\tr1\n",
+    )
+    with caplog.at_level(logging.DEBUG, logger="synthonor.synthon_or_rdkit"):
+        index = load_synthon_or_index(syntons, skip_bad_rows=True)
+
+    assert [record.synthon_id for record in index.row_lookup.values()] == ["a1", "b1"]
+    assert list(index.row_lookup) == [0, 1]
+    assert index.fingerprint_cache is not None
+    assert index.fingerprint_cache.num_rows == 2
+    assert index.packed_fingerprints is not None
+    assert index.packed_fingerprints.shape[0] == 2
+    hits = search_smiles("CCC", index, top_n=1)
+    assert hits[0].synthon_ids == ("a1", "b1")
+    failures = [record for record in caplog.records if record.name == "synthonor.synthon_or_rdkit"]
+    assert len(failures) == 1
+    assert failures[0].levelno == logging.DEBUG
+    assert failures[0].getMessage() == "Skipping row 3 after fingerprint validation failed"
+    assert failures[0].exc_info is not None
+    assert isinstance(failures[0].exc_info[1], ValueError)

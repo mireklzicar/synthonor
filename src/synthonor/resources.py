@@ -6,7 +6,6 @@ from pathlib import Path
 from shutil import copyfile
 from tempfile import gettempdir
 
-
 _PathBase = type(Path())
 
 

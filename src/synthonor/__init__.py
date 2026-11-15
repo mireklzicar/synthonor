@@ -19,8 +19,8 @@ from synthonor.synthon_or_rdkit import (
 
 __all__ = [
     "ApproxHit",
-    "FingerprintSpec",
     "FingerprintCacheInfo",
+    "FingerprintSpec",
     "SearchConfig",
     "SynthonORIndex",
     "__version__",
