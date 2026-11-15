@@ -1,7 +1,7 @@
 # synthonor
 
 [![PyPI](https://img.shields.io/pypi/v/synthonor.svg)](https://pypi.org/project/synthonor/)
-[![Demo Website](https://img.shields.io/badge/demo-website-0A7B83)](https://synthonor.mireklzicar.com/)
+[![Demo Website](https://img.shields.io/badge/demo-website-0A7B83)](https://synthonor.deepmedchem.com/)
 
 Open source synthon similarity search with a bitwise OR strategy and support of generic fingerprints (ecfp4, rdkit, atom pair, topological torsion...)
 

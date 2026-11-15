@@ -40,6 +40,7 @@ dev = [
 ]
 
 [project.urls]
+Demo = "https://synthonor.deepmedchem.com/"
 Homepage = "https://github.com/mireklzicar/synthonor"
 Documentation = "https://github.com/mireklzicar/synthonor#readme"
 Repository = "https://github.com/mireklzicar/synthonor"
